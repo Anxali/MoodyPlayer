@@ -1,11 +1,9 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
 
 const FacialExpression = () => {
   const webcamRef = useRef(null);
-  const canvasRef = useRef(null);
 
   const [mood, setMood] = useState("Detecting...");
   const [loading, setLoading] = useState(true);
@@ -57,57 +55,19 @@ const FacialExpression = () => {
 
             console.log("Detections:", detections);
 
-            const canvas = canvasRef.current;
-
-            if (!canvas) return;
-
-            const displaySize = {
-              width: video.videoWidth,
-              height: video.videoHeight,
-            };
-
-            faceapi.matchDimensions(canvas, displaySize);
-
-            const ctx = canvas.getContext("2d");
-
-            ctx.clearRect(
-              0,
-              0,
-              canvas.width,
-              canvas.height
-            );
-
             // If face detected
             if (detections) {
-              const resizedDetections =
-                faceapi.resizeResults(
-                  detections,
-                  displaySize
-                );
-
-              // Draw detection box
-              faceapi.draw.drawDetections(
-                canvas,
-                resizedDetections
-              );
-
-              // Expressions object
-              const expressions =
-                detections.expressions;
+              const expressions = detections.expressions;
 
               // Find highest probability expression
-              let mostProbableExpression =
-                "neutral";
+              let mostProbableExpression = "neutral";
 
               for (const expression in expressions) {
                 if (
                   expressions[expression] >
-                  expressions[
-                    mostProbableExpression
-                  ]
+                  expressions[mostProbableExpression]
                 ) {
-                  mostProbableExpression =
-                    expression;
+                  mostProbableExpression = expression;
                 }
               }
 
@@ -122,10 +82,7 @@ const FacialExpression = () => {
             }
           }
         } catch (error) {
-          console.error(
-            "Detection Error:",
-            error
-          );
+          console.error("Detection Error:", error);
         }
       }, 1000);
     }
@@ -142,41 +99,22 @@ const FacialExpression = () => {
     >
       <h1>Moody Player</h1>
 
-      <div
-        style={{
-          position: "relative",
-          width: "640px",
-          margin: "0 auto",
+      <Webcam
+        ref={webcamRef}
+        audio={false}
+        mirrored={true}
+        screenshotFormat="image/jpeg"
+        videoConstraints={{
+          width: 640,
+          height: 480,
+          facingMode: "user",
         }}
-      >
-        <Webcam
-          ref={webcamRef}
-          audio={false}
-          mirrored={true}
-          screenshotFormat="image/jpeg"
-          videoConstraints={{
-            width: 640,
-            height: 480,
-            facingMode: "user",
-          }}
-          style={{
-            width: "640px",
-            height: "480px",
-            borderRadius: "10px",
-          }}
-        />
-
-        <canvas
-          ref={canvasRef}
-          width={640}
-          height={480}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-          }}
-        />
-      </div>
+        style={{
+          width: "640px",
+          height: "480px",
+          borderRadius: "10px",
+        }}
+      />
 
       <h2
         style={{
@@ -191,3 +129,4 @@ const FacialExpression = () => {
 };
 
 export default FacialExpression;
+
