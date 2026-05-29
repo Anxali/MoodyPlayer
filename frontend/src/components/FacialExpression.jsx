@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
@@ -9,7 +10,7 @@ const FacialExpression = () => {
   const [mood, setMood] = useState("Detecting...");
   const [loading, setLoading] = useState(true);
 
-  // Load Models
+  // Load Face API Models
   useEffect(() => {
     const loadModels = async () => {
       const MODEL_URL = "/models";
@@ -21,69 +22,110 @@ const FacialExpression = () => {
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         ]);
 
-        console.log("Models Loaded");
+        console.log("Models Loaded Successfully");
         setLoading(false);
       } catch (error) {
-        console.error("Error loading models:", error);
+        console.error("Error Loading Models:", error);
       }
     };
 
     loadModels();
   }, []);
 
-  // Start Detection
+  // Face Detection
   useEffect(() => {
     let interval;
 
     if (!loading) {
       interval = setInterval(async () => {
-        if (
-          webcamRef.current &&
-          webcamRef.current.video.readyState === 4
-        ) {
-          const video = webcamRef.current.video;
+        try {
+          if (
+            webcamRef.current &&
+            webcamRef.current.video &&
+            webcamRef.current.video.readyState === 4
+          ) {
+            const video = webcamRef.current.video;
 
-          const detections = await faceapi
-            .detectSingleFace(
-              video,
-              new faceapi.TinyFaceDetectorOptions()
-            )
-            .withFaceLandmarks()
-            .withFaceExpressions();
+            // Detect Face + Expressions
+            const detections = await faceapi
+              .detectSingleFace(
+                video,
+                new faceapi.TinyFaceDetectorOptions()
+              )
+              .withFaceLandmarks()
+              .withFaceExpressions();
 
-          const canvas = canvasRef.current;
+            console.log("Detections:", detections);
 
-          if (!canvas) return;
+            const canvas = canvasRef.current;
 
-          const displaySize = {
-            width: video.videoWidth,
-            height: video.videoHeight,
-          };
+            if (!canvas) return;
 
-          faceapi.matchDimensions(canvas, displaySize);
+            const displaySize = {
+              width: video.videoWidth,
+              height: video.videoHeight,
+            };
 
-          const ctx = canvas.getContext("2d");
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
+            faceapi.matchDimensions(canvas, displaySize);
 
-          if (detections) {
-            const resizedDetections = faceapi.resizeResults(
-              detections,
-              displaySize
+            const ctx = canvas.getContext("2d");
+
+            ctx.clearRect(
+              0,
+              0,
+              canvas.width,
+              canvas.height
             );
 
-            faceapi.draw.drawDetections(canvas, resizedDetections);
+            // If face detected
+            if (detections) {
+              const resizedDetections =
+                faceapi.resizeResults(
+                  detections,
+                  displaySize
+                );
 
-            // Detect Dominant Mood
-            const expressions = detections.expressions;
+              // Draw detection box
+              faceapi.draw.drawDetections(
+                canvas,
+                resizedDetections
+              );
 
-            const detectedMood = Object.keys(expressions).reduce((a, b) =>
-              expressions[a] > expressions[b] ? a : b
-            );
+              // Expressions object
+              const expressions =
+                detections.expressions;
 
-            setMood(detectedMood);
-          } else {
-            setMood("No Face Detected");
+              // Find highest probability expression
+              let mostProbableExpression =
+                "neutral";
+
+              for (const expression in expressions) {
+                if (
+                  expressions[expression] >
+                  expressions[
+                    mostProbableExpression
+                  ]
+                ) {
+                  mostProbableExpression =
+                    expression;
+                }
+              }
+
+              console.log(
+                "Most Probable Expression:",
+                mostProbableExpression
+              );
+
+              setMood(mostProbableExpression);
+            } else {
+              setMood("No Face Detected");
+            }
           }
+        } catch (error) {
+          console.error(
+            "Detection Error:",
+            error
+          );
         }
       }, 1000);
     }
